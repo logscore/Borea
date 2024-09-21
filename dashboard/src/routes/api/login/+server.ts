@@ -5,14 +5,15 @@ import { SERVER_KEY } from '$env/static/private';
 
 //replace with SQLite storage implementation)
 
-const passwordhsh = await bcrypt.hash('gabagool', 10);
+const passwordhsh = await bcrypt.hash('password', 10);
 
 const users = [
 	{
 		username: 'admin',
 		passwordHash: `${passwordhsh}`
-	} // You'll need to set this password hash
+	}
 ];
+
 export async function POST({ request, cookies }) {
 	try {
 		const { username, password } = await request.json();

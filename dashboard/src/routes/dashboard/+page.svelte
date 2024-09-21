@@ -1,11 +1,8 @@
 <script>
-	import { goto } from '$app/navigation';
-
-	async function handleLogout() {
-		await fetch('/api/logout', { method: 'POST' });
-		goto('/dashboard/login');
-	}
+	import Nav from '$lib/components/Nav.svelte';
 </script>
 
-<h1>Welcome to your dashboard!</h1>
-<button on:click={handleLogout}>Logout</button>
+<div class="flex">
+	<h1>Welcome to your dashboard!</h1>
+	<Nav />
+</div>

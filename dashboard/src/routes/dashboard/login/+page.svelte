@@ -1,4 +1,8 @@
-<script>
+<script lang="ts">
+	import { Button } from '$lib/components/ui/button/index.js';
+	import * as Card from '$lib/components/ui/card/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
+	import { Label } from '$lib/components/ui/label/index.js';
 	import { goto } from '$app/navigation';
 
 	let username = '';
@@ -22,11 +26,37 @@
 	}
 </script>
 
-<form on:submit|preventDefault={handleSubmit}>
-	<input bind:value={username} type="text" placeholder="Username" required />
-	<input bind:value={password} type="password" placeholder="Password" required />
-	<button type="submit">Login</button>
-</form>
-{#if error}
-	<p>{error}</p>
-{/if}
+<div class="flex h-screen w-screen items-center justify-center">
+	<Card.Root class="w-full max-w-sm">
+		<Card.Header>
+			<Card.Title class="text-2xl">Login</Card.Title>
+			<Card.Description>Enter your admin username and password.</Card.Description>
+		</Card.Header>
+		<form on:submit|preventDefault={handleSubmit}>
+			<Card.Content class="grid gap-4">
+				<div class="grid gap-2">
+					<Label for="username">Email</Label>
+					<Input
+						bind:value={username}
+						id="username"
+						type="username"
+						placeholder="sneakyOrkz01"
+						required
+					/>
+				</div>
+				<div class="grid gap-2">
+					<Label for="password">Password</Label>
+					<Input bind:value={password} id="password" type="password" required />
+				</div>
+				{#if error}
+					<div class="text-red-500">
+						<p class="pb-1 text-center">{error}</p>
+					</div>
+				{/if}
+			</Card.Content>
+			<Card.Footer>
+				<Button type="submit" class="w-full">Sign in</Button>
+			</Card.Footer>
+		</form>
+	</Card.Root>
+</div>
