@@ -1,3 +1,9 @@
+# Ignore folders
+/dev_utils
+
+# Ignore files
+dbutils.js
+
 node_modules
 
 # Output
