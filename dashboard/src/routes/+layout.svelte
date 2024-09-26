@@ -3,5 +3,7 @@
 	import '../app.css';
 </script>
 
+<title> Borea Dashboard </title>
+
 <ModeWatcher />
 <slot />
