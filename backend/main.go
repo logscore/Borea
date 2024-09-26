@@ -1,3 +1,5 @@
+// All this should do is initialize a db connection, initialize handle listeners and set the listening port
+
 package main
 
 import (

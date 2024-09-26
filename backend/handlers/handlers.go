@@ -1,3 +1,5 @@
+// This is the file to put our crud and query functions into.
+
 package handlers
 
 import (
@@ -6,8 +8,6 @@ import (
 	"log"
 	"net/http"
 
-	// "strconv"
-	// "strings"
 	"Borea/backend/db"
 )
 
@@ -17,7 +17,8 @@ type Auth_item struct {
 	PasswordHash string `json:"passwordHash"`
 }
 
-// Helper function to extract the ID from the URL
+// Helper function to extract the ID from the URL in GetItem
+// TODO: throw all the helper functions into a separate file
 //
 //	func extractIDFromURL(path string) (int, error) {
 //		parts := strings.Split(path, "/")
@@ -31,6 +32,7 @@ func GetItems(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Make this check with every function to avoid null pointers.
 	if db.DB == nil {
 		log.Println("Database connection not initialized")
 		http.Error(w, "Internal server error", http.StatusInternalServerError)

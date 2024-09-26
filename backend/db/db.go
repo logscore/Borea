@@ -1,9 +1,11 @@
+// this is for broad db function like opening a connection, closing a connection, and pinging.
+// This may turn into a more advanced library inthe future, but for now, keep it simple stupid.
+
 package db
 
 import (
 	"database/sql"
 	"fmt"
-	"log"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -22,6 +24,5 @@ func InitDB() error {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	log.Println("Database connection successfully established")
 	return nil
 }
