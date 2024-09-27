@@ -49,7 +49,7 @@ func main() {
 	go func() {
 		log.Printf("Server starting on %s\n", URL)
 		if err := server.ListenAndServe(); err != http.ErrServerClosed {
-			log.Fatalf("Server error: %v", err)
+			log.Fatalf("Server init error: %v", err)
 		}
 	}()
 

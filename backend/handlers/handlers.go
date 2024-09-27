@@ -53,6 +53,7 @@ func GetItems(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Use a parameterized query to avoid SQL injection
+	// Make this work by passing in a SQL query from the reqeust body. How can I prevent injections?
 	query := "SELECT ID, username, passwordHash FROM admin_users WHERE username = ?"
 	rows, err := db.DB.Query(query, requestBody.Params)
 	if err != nil {
