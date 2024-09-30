@@ -12,16 +12,16 @@ import (
 
 var DB *sql.DB
 
-func InitDB() error {
+func InitDB(dbName string) error {
 	var err error
-	DB, err = sql.Open("sqlite3", "../db.sqlite")
+	DB, err = sql.Open("sqlite3", dbName)
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
 
-	// Optionally, ping the database to check if the connection is valid
+	// Ping the database to check if the connection is valid
 	if err = DB.Ping(); err != nil {
-		return fmt.Errorf("failed to connect to database: %w", err)
+		return fmt.Errorf("failed to ping database: %w", err)
 	}
 
 	return nil

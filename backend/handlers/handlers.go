@@ -9,15 +9,10 @@ import (
 	"net/http"
 
 	"Borea/backend/db"
+	"Borea/backend/models"
 )
 
-type Auth_item struct {
-	ID           int    `json:"ID"`
-	Username     string `json:"username"`
-	PasswordHash string `json:"passwordHash"`
-}
-
-// Helper function to extract the ID from the URL in GetItem
+// Helper function to extract the ID from the URL. Do we want to do the queries via the URL?
 // TODO: throw all the helper functions into a separate file
 //
 //	func extractIDFromURL(path string) (int, error) {
@@ -25,6 +20,8 @@ type Auth_item struct {
 //		idStr := parts[len(parts)-1]
 //		return strconv.Atoi(idStr)
 //	}
+
+// TODO: change this to GET and find a way to send the query & param data without a POST or URL splice
 func GetItems(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		fmt.Println("Invalid request method")
@@ -32,46 +29,61 @@ func GetItems(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Make this check with every function to avoid null pointers.
 	if db.DB == nil {
 		log.Println("Database connection not initialized")
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	// Define a struct to hold the incoming request data
-	var requestBody struct {
-		Query  string        `json:"query"`
-		Params []interface{} `json:"params"`
-	}
+	var requestBody models.Request_body
 
-	// Decode the request body
 	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
 		fmt.Println("Error reading request body:", err)
 		http.Error(w, "Error reading request body", http.StatusInternalServerError)
 		return
 	}
 
-	// Use a parameterized query to avoid SQL injection
-	// Make this work by passing in a SQL query from the reqeust body. How can I prevent injections?
-	query := "SELECT ID, username, passwordHash FROM admin_users WHERE username = ?"
-	rows, err := db.DB.Query(query, requestBody.Params)
+	// The two below methods prevent SQL injection
+	stmt, err := db.DB.Prepare(requestBody.Query)
+	if err != nil {
+		log.Printf("Error preparing query: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	defer stmt.Close()
+
+	rows, err := stmt.Query(requestBody.Params...)
 	if err != nil {
 		log.Printf("Error querying database: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	defer rows.Close() // Ensure the rows are closed after we're done
+	defer rows.Close()
 
-	var items []Auth_item
+	columns, err := rows.Columns()
+	if err != nil {
+		return
+	}
+
+	items := make([]map[string]interface{}, 0)
+
+	values := make([]interface{}, len(columns))
+	for i := range values {
+		var value interface{}
+		values[i] = &value
+	}
+
 	for rows.Next() {
-		var item Auth_item
-		if err := rows.Scan(&item.ID, &item.Username, &item.PasswordHash); err != nil {
-			log.Printf("Error scanning row: %v", err)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
+		if err := rows.Scan(values...); err != nil {
 			return
 		}
-		items = append(items, item)
+
+		rowMap := make(map[string]interface{})
+		for i, colName := range columns {
+			rowMap[colName] = *(values[i].(*interface{}))
+		}
+
+		items = append(items, rowMap)
 	}
 
 	if err := rows.Err(); err != nil {
@@ -80,92 +92,163 @@ func GetItems(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Set response header and encode items as JSON
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(items)
 }
 
-// // Get a single item by ID
-// func GetItem(w http.ResponseWriter, r *http.Request) {
-// 	if r.Method != http.MethodGet {
-// 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
-// 		return
-// 	}
+// TODO: change this to GET and find a way to send the query & param data without a POST or URL splice
+// Note that this returns an interface type, while GetItems returns an array of interface types
+func GetItem(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
 
-// 	id, err := extractIDFromURL(r.URL.Path)
-// 	if err != nil {
-// 		http.Error(w, "Invalid ID", http.StatusBadRequest)
-// 		return
-// 	}
+	if db.DB == nil {
+		log.Println("Database connection not initialized")
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 
-// 	var item Auth_item
-// 	err = db.DB.QueryRow("SELECT id, name, price FROM items WHERE id = ?", id).Scan(&item.ID, &item.username, &item.password)
-// 	if err == sql.ErrNoRows {
-// 		http.Error(w, "Item not found", http.StatusNotFound)
-// 		return
-// 	} else if err != nil {
-// 		log.Fatal(err)
-// 	}
+	var requestBody models.Request_body
 
-// 	w.Header().Set("Content-Type", "application/json")
-// 	json.NewEncoder(w).Encode(item)
-// }
+	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
+		fmt.Println("Error reading request body:", err)
+		http.Error(w, "Error reading request body", http.StatusInternalServerError)
+		return
+	}
 
-// // Create a new item
-// func CreateItem(w http.ResponseWriter, r *http.Request) {
-// 	if r.Method != http.MethodPost {
-// 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
-// 		return
-// 	}
+	// The two below methods prevent SQL injection
+	stmt, err := db.DB.Prepare(requestBody.Query)
+	if err != nil {
+		log.Printf("Error preparing query: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	defer stmt.Close()
 
-// 	var item Auth_item
-// 	err := json.NewDecoder(r.Body).Decode(&item)
-// 	if err != nil {
-// 		http.Error(w, "Invalid input", http.StatusBadRequest)
-// 		return
-// 	}
+	rows, err := stmt.Query(requestBody.Params...)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
 
-// 	result, err := db.DB.Exec("INSERT INTO items (name, price) VALUES (?, ?)", item.username, item.password)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
+	// Get column count and names dynamically
+	columns, err := rows.Columns()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-// 	id, _ := result.LastInsertId()
-// 	item.ID = int(id)
+	values := make([]interface{}, len(columns))
+	valuePtrs := make([]interface{}, len(columns))
 
-// 	w.Header().Set("Content-Type", "application/json")
-// 	json.NewEncoder(w).Encode(item)
-// }
+	for i := range values {
+		valuePtrs[i] = &values[i]
+	}
 
-// // Update an existing item
-// func UpdateItem(w http.ResponseWriter, r *http.Request) {
-// 	if r.Method != http.MethodPut {
-// 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
-// 		return
-// 	}
+	results := make(map[string]interface{})
 
-// 	id, err := extractIDFromURL(r.URL.Path)
-// 	if err != nil {
-// 		http.Error(w, "Invalid ID", http.StatusBadRequest)
-// 		return
-// 	}
+	for rows.Next() {
+		err := rows.Scan(valuePtrs...)
+		if err != nil {
+			log.Fatal(err)
+		}
 
-// 	var item Auth_item
-// 	err = json.NewDecoder(r.Body).Decode(&item)
-// 	if err != nil {
-// 		http.Error(w, "Invalid input", http.StatusBadRequest)
-// 		return
-// 	}
+		for i, col := range columns {
+			results[col] = values[i]
+		}
+	}
 
-// 	_, err = db.DB.Exec("UPDATE items SET name = ?, price = ? WHERE id = ?", item.username, item.password, id)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
+	if err := rows.Err(); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(results)
+		return
+	}
 
-// 	item.ID = id
-// 	w.Header().Set("Content-Type", "application/json")
-// 	json.NewEncoder(w).Encode(item)
-// }
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(results)
+}
+
+// Create a new item
+func CreateItem(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if db.DB == nil {
+		log.Println("Database connection not initialized")
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	var requestBody models.Request_body
+
+	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
+		fmt.Println("Error reading request body:", err)
+		http.Error(w, "Error reading request body", http.StatusInternalServerError)
+		return
+	}
+
+	// The two below methods prevent SQL injection
+	stmt, err := db.DB.Prepare(requestBody.Query)
+	if err != nil {
+		log.Printf("Error preparing query: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	defer stmt.Close()
+
+	result, err := stmt.Exec(requestBody.Params...)
+	if err != nil {
+		log.Fatalf("SQL execution error: %v", err)
+	}
+
+	id, _ := result.LastInsertId()
+	item := int(id)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(item)
+}
+
+// Update an existing item
+func UpdateItem(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if db.DB == nil {
+		log.Println("Database connection not initialized")
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	var requestBody models.Request_body
+
+	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
+		fmt.Println("Error reading request body:", err)
+		http.Error(w, "Error reading request body", http.StatusInternalServerError)
+		return
+	}
+
+	// The two below methods prevent SQL injection
+	stmt, err := db.DB.Prepare(requestBody.Query)
+	if err != nil {
+		log.Printf("Error preparing query: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(requestBody.Params...)
+	if err != nil {
+		log.Fatalf("SQL execution error: %v", err)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+}
 
 // // Delete an item
 // func DeleteItem(w http.ResponseWriter, r *http.Request) {

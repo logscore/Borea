@@ -24,7 +24,7 @@ var (
 )
 
 func main() {
-	err := db.InitDB()
+	err := db.InitDB("../db.sqlite")
 	if err != nil {
 		log.Fatalf("Error: %s", err)
 	}
@@ -32,6 +32,8 @@ func main() {
 	defer db.DB.Close()
 
 	http.HandleFunc("/getItems", handlers.GetItems)
+	http.HandleFunc("/getItem", handlers.GetItem)
+	http.HandleFunc("/createItem", handlers.CreateItem)
 
 	err = godotenv.Load("../.env")
 	if err != nil {
