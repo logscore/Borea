@@ -147,6 +147,30 @@ func TestCreateItem(t *testing.T) {
 		assert.Equal(t, 1, count, "Item should exist in the database")
 	})
 
+	t.Run("Invalid SQL query - non-INSERT query", func(t *testing.T) {
+		requestBody := models.Request_body{
+			Query:  "DELETE FROM test_table WHERE id = ?",
+			Params: []interface{}{1},
+		}
+	
+		jsonBody, _ := json.Marshal(requestBody)
+		req, err := http.NewRequest("POST", "/createItem", bytes.NewBuffer(jsonBody))
+		require.NoError(t, err)
+	
+		req.Header.Set("Content-Type", "application/json")
+		rr := httptest.NewRecorder()
+	
+		handler := http.HandlerFunc(handlers.CreateItem)
+		handler.ServeHTTP(rr, req)
+	
+		// Expecting a bad request status because the query is not a INSERT
+		assert.Equal(t, http.StatusBadRequest, rr.Code, "Should return bad request for non-INSERT query")
+	
+		// Optionally, you can check the response body for a more specific error message
+		expectedErrorMessage := "Invalid query: only INSERT queries allowed"
+		assert.Contains(t, rr.Body.String(), expectedErrorMessage, "Response should contain the correct error message")
+	})
+
 	t.Run("Invalid request method", func(t *testing.T) {
 		req, err := http.NewRequest("GET", "/createItem", nil)
 		require.NoError(t, err, "Error creating request")
@@ -310,6 +334,30 @@ func TestGetItems(t *testing.T) {
 		assert.NotZero(t, firstItem.CreatedAt, "CreatedAt should not be zero")
 	})
 
+	t.Run("Invalid SQL query - non-SELECT query", func(t *testing.T) {
+		requestBody := models.Request_body{
+			Query:  "DELETE FROM test_table WHERE id = ?", // Invalid, since only SELECT is allowed
+			Params: []interface{}{1},
+		}
+	
+		jsonBody, _ := json.Marshal(requestBody)
+		req, err := http.NewRequest("POST", "/getItems", bytes.NewBuffer(jsonBody))
+		require.NoError(t, err)
+	
+		req.Header.Set("Content-Type", "application/json")
+		rr := httptest.NewRecorder()
+	
+		handler := http.HandlerFunc(handlers.GetItems)
+		handler.ServeHTTP(rr, req)
+	
+		// Expecting a bad request status because the query is not a SELECT
+		assert.Equal(t, http.StatusBadRequest, rr.Code, "Should return bad request for non-SELECT query")
+	
+		// Optionally, you can check the response body for a more specific error message
+		expectedErrorMessage := "Invalid query: only SELECT queries allowed"
+		assert.Contains(t, rr.Body.String(), expectedErrorMessage, "Response should contain the correct error message")
+	})
+
 	t.Run("Invalid request method", func(t *testing.T) {
 		req, err := http.NewRequest("GET", "/getItems", nil)
 		require.NoError(t, err)
@@ -445,6 +493,30 @@ func TestGetItem(t *testing.T) {
 		assert.NotZero(t, firstItem.CreatedAt, "CreatedAt should not be zero")
 	})
 
+	t.Run("Invalid SQL query - non-SELECT query", func(t *testing.T) {
+		requestBody := models.Request_body{
+			Query:  "DELETE FROM test_table WHERE id = ?", // Invalid, since only SELECT is allowed
+			Params: []interface{}{1},
+		}
+	
+		jsonBody, _ := json.Marshal(requestBody)
+		req, err := http.NewRequest("POST", "/getItem", bytes.NewBuffer(jsonBody))
+		require.NoError(t, err)
+	
+		req.Header.Set("Content-Type", "application/json")
+		rr := httptest.NewRecorder()
+	
+		handler := http.HandlerFunc(handlers.GetItem)
+		handler.ServeHTTP(rr, req)
+	
+		// Expecting a bad request status because the query is not a SELECT
+		assert.Equal(t, http.StatusBadRequest, rr.Code, "Should return bad request for non-SELECT query")
+	
+		// Optionally, you can check the response body for a more specific error message
+		expectedErrorMessage := "Invalid query: only SELECT queries allowed"
+		assert.Contains(t, rr.Body.String(), expectedErrorMessage, "Response should contain the correct error message")
+	})
+
 	t.Run("Invalid request method", func(t *testing.T) {
 		req, err := http.NewRequest("GET", "/getItem", nil)
 		require.NoError(t, err)
@@ -519,5 +591,188 @@ func TestGetItem(t *testing.T) {
 		err = json.Unmarshal(rr.Body.Bytes(), &responseItem)
 		assert.NoError(t, err, "Error parsing response body")
 		assert.Empty(t, responseItem, "Response should be an empty array")
+	})
+}
+
+func TestUpdateItem(t *testing.T) {
+	// Initialize the database
+	err := db.InitDB("../../test_db.sqlite")
+	require.NoError(t, err, "Database initialization error")
+	defer db.DB.Close()
+
+	err = CreateTestTable()
+	if err != nil {
+		t.Fatalf("Failed to create test table: %v", err)
+	}
+	defer TearDownTestTable()
+
+	err = PopulateTestData()
+	if err != nil {
+		t.Fatalf("Failed to populate test table: %v", err)
+	}
+
+	if db.DB == nil {
+		log.Println("Database connection not initialized")
+		return
+	}
+
+	t.Run("Successful item update", func(t *testing.T) {
+		requestBody := models.Request_body{
+			Query: `SELECT test_table 
+				SET name = ?, age = ?, weight = ?, is_active = ?, notes = ?
+				WHERE id = ?;`,
+			Params: []interface{}{
+				"Updated John Doe", 26, 73.5, false, "Updated note",
+				1,
+			},
+		}
+
+		jsonBody, err := json.Marshal(requestBody)
+		require.NoError(t, err, "Error marshaling request body")
+
+		req, err := http.NewRequest("PUT", "/updateItem", bytes.NewBuffer(jsonBody))
+		require.NoError(t, err, "Error creating request")
+		req.Header.Set("Content-Type", "application/json")
+
+		rr := httptest.NewRecorder()
+		handler := http.HandlerFunc(handlers.UpdateItem)
+		handler.ServeHTTP(rr, req)
+
+		assert.Equal(t, http.StatusOK, rr.Code, "Handler returned wrong status code")
+
+		// Verify the item was actually updated in the database
+		var name string
+		var age int
+		var weight float64
+		var isActive bool
+		var notes string
+		err = db.DB.QueryRow("SELECT name, age, weight, is_active, notes FROM test_table WHERE id = 1").
+			Scan(&name, &age, &weight, &isActive, &notes)
+		assert.NoError(t, err, "Error querying database")
+		assert.Equal(t, "Updated John Doe", name)
+		assert.Equal(t, 26, age)
+		assert.Equal(t, 73.5, weight)
+		assert.Equal(t, false, isActive)
+		assert.Equal(t, "Updated note", notes)
+	})
+
+	t.Run("Invalid SQL query - non-PUT query", func(t *testing.T) {
+		requestBody := models.Request_body{
+			Query:  "DELETE FROM test_table WHERE id = ?",
+			Params: []interface{}{1},
+		}
+	
+		jsonBody, _ := json.Marshal(requestBody)
+		req, err := http.NewRequest("POST", "/updateItem", bytes.NewBuffer(jsonBody))
+		require.NoError(t, err)
+	
+		req.Header.Set("Content-Type", "application/json")
+		rr := httptest.NewRecorder()
+	
+		handler := http.HandlerFunc(handlers.UpdateItem)
+		handler.ServeHTTP(rr, req)
+	
+		// Expecting a bad request status because the query is not a PUT
+		assert.Equal(t, http.StatusBadRequest, rr.Code, "Should return bad request for non-PUT query")
+	
+		// Optionally, you can check the response body for a more specific error message
+		expectedErrorMessage := "Invalid query: only PUT queries allowed"
+		assert.Contains(t, rr.Body.String(), expectedErrorMessage, "Response should contain the correct error message")
+	})
+
+	t.Run("Invalid request method", func(t *testing.T) {
+		req, err := http.NewRequest("POST", "/updateItem", nil)
+		require.NoError(t, err, "Error creating request")
+
+		rr := httptest.NewRecorder()
+		handler := http.HandlerFunc(handlers.UpdateItem)
+		handler.ServeHTTP(rr, req)
+
+		assert.Equal(t, http.StatusMethodNotAllowed, rr.Code, "Should return method not allowed for POST request")
+	})
+
+	t.Run("Invalid JSON in request body", func(t *testing.T) {
+		req, err := http.NewRequest("PUT", "/updateItem", bytes.NewBufferString("invalid json"))
+		require.NoError(t, err, "Error creating request")
+		req.Header.Set("Content-Type", "application/json")
+
+		rr := httptest.NewRecorder()
+		handler := http.HandlerFunc(handlers.UpdateItem)
+		handler.ServeHTTP(rr, req)
+
+		assert.Equal(t, http.StatusInternalServerError, rr.Code, "Should return internal server error for invalid JSON")
+	})
+
+	t.Run("SQL injection attempt", func(t *testing.T) {
+		requestBody := models.Request_body{
+			Query:  `UPDATE test_table SET name = ? WHERE id = 1; DROP TABLE test_table; --`,
+			Params: []interface{}{"Malicious User"},
+		}
+
+		jsonBody, err := json.Marshal(requestBody)
+		require.NoError(t, err, "Error marshaling request body")
+
+		req, err := http.NewRequest("PUT", "/updateItem", bytes.NewBuffer(jsonBody))
+		require.NoError(t, err, "Error creating request")
+		req.Header.Set("Content-Type", "application/json")
+
+		rr := httptest.NewRecorder()
+		handler := http.HandlerFunc(handlers.UpdateItem)
+		handler.ServeHTTP(rr, req)
+
+		// The handler should either return an error or process only the first statement
+		if rr.Code == http.StatusOK {
+			// Verify that only the name was updated and the table still exists
+			var name string
+			err = db.DB.QueryRow("SELECT name FROM test_table WHERE id = 1").Scan(&name)
+			assert.NoError(t, err, "Error querying database")
+			assert.Equal(t, "Malicious User", name)
+		} else {
+			assert.Equal(t, http.StatusInternalServerError, rr.Code, "Should return internal server error for SQL injection attempt")
+		}
+
+		// Verify that the table still exists
+		var count int
+		err = db.DB.QueryRow("SELECT COUNT(*) FROM test_table").Scan(&count)
+		assert.NoError(t, err, "Table should still exist")
+	})
+
+	t.Run("Update item with null values", func(t *testing.T) {
+		requestBody := models.Request_body{
+			Query: `UPDATE test_table 
+				SET name = ?, age = ?, weight = ?, is_active = ?, notes = ?
+				WHERE id = ?;`,
+			Params: []interface{}{
+				"Null Value Test", nil, nil, false, nil,
+				2, // Assuming the second item has ID 2
+			},
+		}
+
+		jsonBody, err := json.Marshal(requestBody)
+		require.NoError(t, err, "Error marshaling request body")
+
+		req, err := http.NewRequest("PUT", "/updateItem", bytes.NewBuffer(jsonBody))
+		require.NoError(t, err, "Error creating request")
+		req.Header.Set("Content-Type", "application/json")
+
+		rr := httptest.NewRecorder()
+		handler := http.HandlerFunc(handlers.UpdateItem)
+		handler.ServeHTTP(rr, req)
+
+		assert.Equal(t, http.StatusOK, rr.Code, "Handler returned wrong status code")
+
+		// Verify the item was updated with null values
+		var name string
+		var age, weight sql.NullFloat64
+		var isActive bool
+		var notes sql.NullString
+		err = db.DB.QueryRow("SELECT name, age, weight, is_active, notes FROM test_table WHERE id = 2").
+			Scan(&name, &age, &weight, &isActive, &notes)
+		assert.NoError(t, err, "Error querying database")
+		assert.Equal(t, "Null Value Test", name)
+		assert.False(t, age.Valid, "Age should be null")
+		assert.False(t, weight.Valid, "Weight should be null")
+		assert.False(t, isActive, "Is_active should be false")
+		assert.False(t, notes.Valid, "Notes should be null")
 	})
 }

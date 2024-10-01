@@ -7,21 +7,25 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"Borea/backend/db"
 	"Borea/backend/models"
 )
 
-// Helper function to extract the ID from the URL. Do we want to do the queries via the URL?
-// TODO: throw all the helper functions into a separate file
-//
-//	func extractIDFromURL(path string) (int, error) {
-//		parts := strings.Split(path, "/")
-//		idStr := parts[len(parts)-1]
-//		return strconv.Atoi(idStr)
-//	}
+func isAllowedQuery(query, expectedCommand string) bool {
+	// Split the query to get the first word
+	queryWords := strings.Fields(query)
+	fmt.Println(queryWords, queryWords[0])
+	if len(queryWords) == 0 {
+		return false
+	}
 
-// TODO: change this to GET and find a way to send the query & param data without a POST or URL splice
+	return strings.ToUpper(queryWords[0]) == expectedCommand
+}
+
+// TODO: change this to GET and find a way to send the query & param data without a POST or URL params
+// TODO: change this to only run SELECT statements
 func GetItems(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		fmt.Println("Invalid request method")
@@ -40,6 +44,11 @@ func GetItems(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
 		fmt.Println("Error reading request body:", err)
 		http.Error(w, "Error reading request body", http.StatusInternalServerError)
+		return
+	}
+
+	if !isAllowedQuery(requestBody.Query, "SELECT") {
+		http.Error(w, "Invalid query: only SELECT queries allowed", http.StatusBadRequest)
 		return
 	}
 
@@ -97,6 +106,7 @@ func GetItems(w http.ResponseWriter, r *http.Request) {
 }
 
 // TODO: change this to GET and find a way to send the query & param data without a POST or URL splice
+// TODO: change this functio nto only run SELECT sql queries
 // Note that this returns an interface type, while GetItems returns an array of interface types
 func GetItem(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -115,6 +125,11 @@ func GetItem(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
 		fmt.Println("Error reading request body:", err)
 		http.Error(w, "Error reading request body", http.StatusInternalServerError)
+		return
+	}
+
+	if !isAllowedQuery(requestBody.Query, "SELECT") {
+		http.Error(w, "Invalid query: only SELECT queries allowed", http.StatusBadRequest)
 		return
 	}
 
@@ -169,6 +184,7 @@ func GetItem(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(results)
 }
 
+// TODO: adjust this function to only run INSERT sql queries only
 // Create a new item
 func CreateItem(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -187,6 +203,11 @@ func CreateItem(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
 		fmt.Println("Error reading request body:", err)
 		http.Error(w, "Error reading request body", http.StatusInternalServerError)
+		return
+	}
+
+	if !isAllowedQuery(requestBody.Query, "INSERT") {
+		http.Error(w, "Invalid query: only INSERT queries allowed", http.StatusBadRequest)
 		return
 	}
 
@@ -211,6 +232,7 @@ func CreateItem(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(item)
 }
 
+// Adjust this to only take PUT/PATCH sql queries only
 // Update an existing item
 func UpdateItem(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
@@ -232,6 +254,11 @@ func UpdateItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !isAllowedQuery(requestBody.Query, "PUT") {
+		http.Error(w, "Invalid query: only PUT queries allowed", http.StatusBadRequest)
+		return
+	}
+
 	// The two below methods prevent SQL injection
 	stmt, err := db.DB.Prepare(requestBody.Query)
 	if err != nil {
@@ -241,10 +268,11 @@ func UpdateItem(w http.ResponseWriter, r *http.Request) {
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(requestBody.Params...)
+	result, err := stmt.Exec(requestBody.Params...)
 	if err != nil {
 		log.Fatalf("SQL execution error: %v", err)
 	}
+	fmt.Println(result.RowsAffected())
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -263,7 +291,7 @@ func UpdateItem(w http.ResponseWriter, r *http.Request) {
 // 		return
 // 	}
 
-// 	_, err = db.DB.Exec("DELETE FROM items WHERE id = ?", id)
+// 	_, err = db.DB.Exec("DELETE FROM test_table WHERE id = ?", id)
 // 	if err != nil {
 // 		log.Fatal(err)
 // 	}
