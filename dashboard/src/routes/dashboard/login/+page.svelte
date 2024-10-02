@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
+	import InputUsername from '$lib/components/InputUsername.svelte';
+	import InputPassword from '$lib/components/InputPassword.svelte';
 	import { goto } from '$app/navigation';
 
 	let username = '';
@@ -36,17 +37,11 @@
 			<Card.Content class="grid gap-4">
 				<div class="grid gap-2">
 					<Label for="username">Email</Label>
-					<Input
-						bind:value={username}
-						id="username"
-						type="username"
-						placeholder="sneakyOrkz01"
-						required
-					/>
+					<InputUsername bind:value={username} />
 				</div>
 				<div class="grid gap-2">
 					<Label for="password">Password</Label>
-					<Input bind:value={password} id="password" type="password" required />
+					<InputPassword bind:value={password} />
 				</div>
 				{#if error}
 					<div class="text-red-500">
