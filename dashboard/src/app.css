@@ -2,79 +2,69 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-	--color-primary-dark: 231 82% 8%;
-	--color-primary-light: 231 82% 92%;
-	--color-lime-green: 165 75% 56%;
-	--color-orange: 11 100% 62%;
-	--color-pink-red: 310 56% 32%;
-	--color-dark-purple: 310 56% 32%;
-	--color-light-purple: 305 47% 65%;
-}
-
 @layer base {
 	:root {
-		--background: var(--color-primary-light);
-		--foreground: var(--color-primary-dark);
+		--background: 0 0% 100%;
+		--foreground: 222.2 84% 4.9%;
 
-		--primary: var(--color-lime-green);
-		--primary-foreground: var(--color-primary-dark);
+		--muted: 210 40% 96.1%;
+		--muted-foreground: 215.4 16.3% 46.9%;
 
-		--secondary: var(--color-orange);
-		--secondary-foreground: var(--color-primary-dark);
+		--popover: 0 0% 100%;
+		--popover-foreground: 222.2 84% 4.9%;
 
-		--accent: var(--color-pink-red);
-		--accent-foreground: var(--color-primary-light);
+		--card: 0 0% 100%;
+		--card-foreground: 222.2 84% 4.9%;
 
-		--muted: var(--color-light-purple);
-		--muted-foreground: var(--color-primary-dark);
+		--border: 214.3 31.8% 91.4%;
+		--input: 214.3 31.8% 91.4%;
 
-		--popover: var(--color-primary-light);
-		--popover-foreground: var(--color-primary-dark);
+		--primary: 222.2 47.4% 11.2%;
+		--primary-foreground: 210 40% 98%;
 
-		--card: var(--color-primary-light);
-		--card-foreground: var(--color-primary-dark);
+		--secondary: 210 40% 96.1%;
+		--secondary-foreground: 222.2 47.4% 11.2%;
 
-		--border: var(--color-dark-purple);
-		--input: var(--color-dark-purple);
+		--accent: 210 40% 96.1%;
+		--accent-foreground: 222.2 47.4% 11.2%;
 
-		--destructive: 0 84% 60%;
-		--destructive-foreground: var(--color-primary-light);
+		--destructive: 0 72.2% 50.6%;
+		--destructive-foreground: 210 40% 98%;
 
-		--ring: var(--color-lime-green);
+		--ring: 222.2 84% 4.9%;
 
 		--radius: 0.5rem;
 	}
 
 	.dark {
-		--background: var(--color-primary-dark);
-		--foreground: var(--color-primary-light);
+		--background: 222.2 84% 4.9%;
+		--foreground: 210 40% 98%;
 
-		--primary: var(--color-lime-green);
-		--primary-foreground: var(--color-primary-dark);
+		--muted: 217.2 32.6% 17.5%;
+		--muted-foreground: 215 20.2% 65.1%;
 
-		--secondary: var(--color-orange);
-		--secondary-foreground: var(--color-primary-light);
+		--popover: 222.2 84% 4.9%;
+		--popover-foreground: 210 40% 98%;
 
-		--accent: var(--color-pink-red);
-		--accent-foreground: var(--color-primary-light);
+		--card: 222.2 84% 4.9%;
+		--card-foreground: 210 40% 98%;
 
-		--muted: var(--color-dark-purple);
-		--muted-foreground: var(--color-primary-light);
+		--border: 217.2 32.6% 17.5%;
+		--input: 217.2 32.6% 17.5%;
 
-		--popover: var(--color-primary-dark);
-		--popover-foreground: var(--color-primary-light);
+		--primary: 210 40% 98%;
+		--primary-foreground: 222.2 47.4% 11.2%;
 
-		--card: var(--color-primary-dark);
-		--card-foreground: var(--color-primary-light);
+		--secondary: 217.2 32.6% 17.5%;
+		--secondary-foreground: 210 40% 98%;
 
-		--border: var(--color-light-purple);
-		--input: var(--color-light-purple);
+		--accent: 217.2 32.6% 17.5%;
+		--accent-foreground: 210 40% 98%;
 
-		--destructive: 0 62% 30%;
-		--destructive-foreground: var(--color-primary-light);
+		--destructive: 0 62.8% 30.6%;
+		--destructive-foreground: 210 40% 98%;
 
-		--ring: var(--color-lime-green);
+		--ring: 212.7 26.8% 83.9%;
 	}
 }
 
