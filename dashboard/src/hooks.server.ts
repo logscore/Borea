@@ -4,11 +4,11 @@ import jwt from 'jsonwebtoken';
 
 const nonPublicRoutes = ['/', '/dashboard'];
 
-const authenticatedUser = async (event: RequestEvent) => {
+const authenticatedUser = (event: RequestEvent) => {
 	const token = event.cookies.get('session');
 
 	try {
-		await jwt.verify(token ?? '', SERVER_KEY);
+		jwt.verify(token ?? '', SERVER_KEY);
 		return true;
 	} catch {
 		return false;
@@ -16,12 +16,13 @@ const authenticatedUser = async (event: RequestEvent) => {
 };
 
 export const handle: Handle = async ({ event, resolve }) => {
-	const verified = await authenticatedUser(event);
+	const verified = authenticatedUser(event);
 	const { pathname } = event.url;
 
-	if (nonPublicRoutes.includes(pathname) && !verified) {
+	if (!verified && nonPublicRoutes.includes(pathname)) {
 		throw redirect(303, '/dashboard/login');
 	}
 
-	return await resolve(event);
+	const response = await resolve(event);
+	return response;
 };
