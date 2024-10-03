@@ -345,7 +345,7 @@ func HandleScriptRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jsContent, err := os.ReadFile(filepath.Join(projectRoot, "/tracker/sessionTracker.js"))
+	jsContent, err := os.ReadFile(filepath.Join(projectRoot, "/tracker/Borea.js"))
 	if err != nil {
 		http.Error(w, "Error reading script file", http.StatusInternalServerError)
 		log.Printf("Error reading script file: %v", err)
