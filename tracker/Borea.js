@@ -11,7 +11,7 @@ const metadataKey = 'metadata';
 const postData = true;
 const hostname = window.location.hostname;
 const GO_PORT = '8080';
-const postSessionDataRoute = 'postSessionData';
+const postSessionDataRoute = 'postSession';
 
 Borea.init = function () {
     this[metadataKey] = {
