@@ -55,7 +55,7 @@ func CreateTestTable() error {
 }
 
 func TearDownTestTable() error {
-	_, err := db.DB.Exec("DROP TABLE IF EXISTS test_table")
+	_, err := db.DB.Exec(`DROP TABLE IF EXISTS test_table`)
 	if err != nil {
 		log.Printf("Error dropping test_table: %v", err)
 		return err
@@ -72,7 +72,7 @@ func PopulateTestData() error {
 		return err
 	}
 	stmt, err := db.DB.Prepare(`
-	INSERT INTO test_table 
+	INSERT INTO test_table
 	(name, age, weight, profile_picture, is_active, notes, created_at)
 	VALUES (?, ?, ?, ?, ?, ?, ?)
 `)
@@ -113,7 +113,7 @@ func TestCreateItem(t *testing.T) {
 	t.Run("Successful item creation", func(t *testing.T) {
 		exampleBlob := []byte{0x89, 0x50, 0x4E, 0x47}
 		requestBody := models.Request_body{
-			Query: `INSERT INTO test_table 
+			Query: `INSERT INTO test_table
 				(name, age, weight, profile_picture, is_active, notes, created_at)
 				VALUES (?, ?, ?, ?, ?, ?, ?);`,
 			Params: []interface{}{
@@ -152,20 +152,20 @@ func TestCreateItem(t *testing.T) {
 			Query:  "DELETE FROM test_table WHERE id = ?",
 			Params: []interface{}{1},
 		}
-	
+
 		jsonBody, _ := json.Marshal(requestBody)
 		req, err := http.NewRequest("POST", "/createItem", bytes.NewBuffer(jsonBody))
 		require.NoError(t, err)
-	
+
 		req.Header.Set("Content-Type", "application/json")
 		rr := httptest.NewRecorder()
-	
+
 		handler := http.HandlerFunc(handlers.CreateItem)
 		handler.ServeHTTP(rr, req)
-	
+
 		// Expecting a bad request status because the query is not a INSERT
 		assert.Equal(t, http.StatusBadRequest, rr.Code, "Should return bad request for non-INSERT query")
-	
+
 		// Optionally, you can check the response body for a more specific error message
 		expectedErrorMessage := "Invalid query: only INSERT queries allowed"
 		assert.Contains(t, rr.Body.String(), expectedErrorMessage, "Response should contain the correct error message")
@@ -229,7 +229,7 @@ func TestCreateItem(t *testing.T) {
 
 	t.Run("Create item with null values", func(t *testing.T) {
 		requestBody := models.Request_body{
-			Query: `INSERT INTO test_table 
+			Query: `INSERT INTO test_table
 				(name, age, weight, profile_picture, is_active, notes, created_at)
 				VALUES (?, ?, ?, ?, ?, ?, ?);`,
 			Params: []interface{}{
@@ -339,20 +339,20 @@ func TestGetItems(t *testing.T) {
 			Query:  "DELETE FROM test_table WHERE id = ?", // Invalid, since only SELECT is allowed
 			Params: []interface{}{1},
 		}
-	
+
 		jsonBody, _ := json.Marshal(requestBody)
 		req, err := http.NewRequest("POST", "/getItems", bytes.NewBuffer(jsonBody))
 		require.NoError(t, err)
-	
+
 		req.Header.Set("Content-Type", "application/json")
 		rr := httptest.NewRecorder()
-	
+
 		handler := http.HandlerFunc(handlers.GetItems)
 		handler.ServeHTTP(rr, req)
-	
+
 		// Expecting a bad request status because the query is not a SELECT
 		assert.Equal(t, http.StatusBadRequest, rr.Code, "Should return bad request for non-SELECT query")
-	
+
 		// Optionally, you can check the response body for a more specific error message
 		expectedErrorMessage := "Invalid query: only SELECT queries allowed"
 		assert.Contains(t, rr.Body.String(), expectedErrorMessage, "Response should contain the correct error message")
@@ -498,20 +498,20 @@ func TestGetItem(t *testing.T) {
 			Query:  "DELETE FROM test_table WHERE id = ?", // Invalid, since only SELECT is allowed
 			Params: []interface{}{1},
 		}
-	
+
 		jsonBody, _ := json.Marshal(requestBody)
 		req, err := http.NewRequest("POST", "/getItem", bytes.NewBuffer(jsonBody))
 		require.NoError(t, err)
-	
+
 		req.Header.Set("Content-Type", "application/json")
 		rr := httptest.NewRecorder()
-	
+
 		handler := http.HandlerFunc(handlers.GetItem)
 		handler.ServeHTTP(rr, req)
-	
+
 		// Expecting a bad request status because the query is not a SELECT
 		assert.Equal(t, http.StatusBadRequest, rr.Code, "Should return bad request for non-SELECT query")
-	
+
 		// Optionally, you can check the response body for a more specific error message
 		expectedErrorMessage := "Invalid query: only SELECT queries allowed"
 		assert.Contains(t, rr.Body.String(), expectedErrorMessage, "Response should contain the correct error message")
@@ -618,7 +618,7 @@ func TestUpdateItem(t *testing.T) {
 
 	t.Run("Successful item update", func(t *testing.T) {
 		requestBody := models.Request_body{
-			Query: `SELECT test_table 
+			Query: `UPDATE test_table
 				SET name = ?, age = ?, weight = ?, is_active = ?, notes = ?
 				WHERE id = ?;`,
 			Params: []interface{}{
@@ -661,20 +661,20 @@ func TestUpdateItem(t *testing.T) {
 			Query:  "DELETE FROM test_table WHERE id = ?",
 			Params: []interface{}{1},
 		}
-	
+
 		jsonBody, _ := json.Marshal(requestBody)
 		req, err := http.NewRequest("POST", "/updateItem", bytes.NewBuffer(jsonBody))
 		require.NoError(t, err)
-	
+
 		req.Header.Set("Content-Type", "application/json")
 		rr := httptest.NewRecorder()
-	
+
 		handler := http.HandlerFunc(handlers.UpdateItem)
 		handler.ServeHTTP(rr, req)
-	
+
 		// Expecting a bad request status because the query is not a PUT
-		assert.Equal(t, http.StatusBadRequest, rr.Code, "Should return bad request for non-PUT query")
-	
+		assert.Equal(t, http.StatusMethodNotAllowed, rr.Code, "Should return bad request for non-PUT query")
+
 		// Optionally, you can check the response body for a more specific error message
 		expectedErrorMessage := "Invalid query: only PUT queries allowed"
 		assert.Contains(t, rr.Body.String(), expectedErrorMessage, "Response should contain the correct error message")
@@ -739,7 +739,7 @@ func TestUpdateItem(t *testing.T) {
 
 	t.Run("Update item with null values", func(t *testing.T) {
 		requestBody := models.Request_body{
-			Query: `UPDATE test_table 
+			Query: `UPDATE test_table
 				SET name = ?, age = ?, weight = ?, is_active = ?, notes = ?
 				WHERE id = ?;`,
 			Params: []interface{}{

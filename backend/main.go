@@ -35,6 +35,8 @@ func main() {
 	http.HandleFunc("/getItem", handlers.GetItem)
 	http.HandleFunc("/createItem", handlers.CreateItem)
 	http.HandleFunc("/updateItem", handlers.UpdateItem)
+	http.HandleFunc("/script", handlers.HandleScriptRequest)
+	http.HandleFunc("/postSession", handlers.PostSessionData)
 
 	err = godotenv.Load("../.env")
 	if err != nil {
