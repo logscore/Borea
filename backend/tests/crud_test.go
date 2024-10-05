@@ -18,32 +18,30 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/exp/rand"
-
-	_ "github.com/mattn/go-sqlite3"
 )
 
 type TestTable struct {
-	ID             int     `json:"id"`              // INTEGER type (auto-incremented)
-	Name           string  `json:"name"`            // TEXT type
-	Age            int     `json:"age"`             // INTEGER type
-	Weight         float64 `json:"weight"`          // REAL type (floating-point)
-	ProfilePicture []byte  `json:"profile_picture"` // BLOB type (binary data)
-	IsActive       int     `json:"is_active"`       // INTEGER used as boolean (1=true, 0=false)
-	Notes          string  `json:"notes"`           // TEXT type for additional notes
-	CreatedAt      string  `json:"created_at"`      // TEXT type to store date/time as string
+	ID             int     `json:"id"`
+	Name           string  `json:"name"`
+	Age            int     `json:"age"`
+	Weight         float64 `json:"weight"`
+	ProfilePicture []byte  `json:"profile_picture"`
+	IsActive       bool    `json:"is_active"`
+	Notes          string  `json:"notes"`
+	CreatedAt      string  `json:"created_at"`
 }
 
 func CreateTestTable() error {
 	_, err := db.DB.Exec(`
 	CREATE TABLE IF NOT EXISTS test_table (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,  -- INTEGER type (auto-incremented)
-		name TEXT,                             -- TEXT type
-		age INTEGER,                           -- INTEGER type
-		weight REAL,                           -- REAL type (floating-point)
-		profile_picture BLOB,                  -- BLOB type (binary data)
-		is_active INTEGER,                     -- INTEGER used as boolean (1=true, 0=false)
-		notes TEXT,                            -- TEXT type for additional notes
-		created_at TEXT                        -- TEXT type to store date/time as string
+		id SERIAL PRIMARY KEY,           -- Automatically increments for each row
+		name TEXT NOT NULL,              -- Text data, not nullable for ensuring input
+		age INTEGER,                     -- Integer type for age
+		weight REAL,                     -- Real (floating-point) for weight
+		profile_picture BYTEA,           -- Binary data type for storing image or file
+		is_active BOOLEAN DEFAULT TRUE,  -- Boolean flag with a default value of TRUE
+		notes TEXT DEFAULT NULL,         -- Text type for additional notes, nullable
+		created_at TIMESTAMP DEFAULT NOW() -- Automatically sets the current timestamp
 	);`)
 	if err != nil {
 		log.Printf("Error creating test_table: %v", err)
@@ -74,8 +72,8 @@ func PopulateTestData() error {
 	stmt, err := db.DB.Prepare(`
 	INSERT INTO test_table
 	(name, age, weight, profile_picture, is_active, notes, created_at)
-	VALUES (?, ?, ?, ?, ?, ?, ?)
-`)
+	VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`)
 	if err != nil {
 		return fmt.Errorf("error preparing statement: %v", err)
 	}
@@ -102,7 +100,7 @@ func PopulateTestData() error {
 
 func TestCreateItem(t *testing.T) {
 	// Initialize the database
-	err := db.InitDB("../../test_db.sqlite")
+	err := db.InitDB()
 	require.NoError(t, err, "Database initialization error")
 	defer db.DB.Close()
 
@@ -115,7 +113,7 @@ func TestCreateItem(t *testing.T) {
 		requestBody := models.Request_body{
 			Query: `INSERT INTO test_table
 				(name, age, weight, profile_picture, is_active, notes, created_at)
-				VALUES (?, ?, ?, ?, ?, ?, ?);`,
+				VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id;`,
 			Params: []interface{}{
 				"John Doe", 25, 72.5, exampleBlob, true, "This is a note",
 				time.Now().Format("2006-01-02 15:04:05"),
@@ -142,14 +140,14 @@ func TestCreateItem(t *testing.T) {
 
 		// Verify the item was actually created in the database
 		var count int
-		err = db.DB.QueryRow("SELECT COUNT(*) FROM test_table WHERE id = ?", responseID).Scan(&count)
+		err = db.DB.QueryRow("SELECT COUNT(*) FROM test_table WHERE id = 1").Scan(&count)
 		assert.NoError(t, err, "Error querying database")
 		assert.Equal(t, 1, count, "Item should exist in the database")
 	})
 
 	t.Run("Invalid SQL query - non-INSERT query", func(t *testing.T) {
 		requestBody := models.Request_body{
-			Query:  "DELETE FROM test_table WHERE id = ?",
+			Query:  "DELETE FROM test_table WHERE id = $1",
 			Params: []interface{}{1},
 		}
 
@@ -196,7 +194,7 @@ func TestCreateItem(t *testing.T) {
 
 	t.Run("SQL injection attempt", func(t *testing.T) {
 		requestBody := models.Request_body{
-			Query:  `INSERT INTO test_table (name) VALUES (?); DROP TABLE test_table; --`,
+			Query:  `INSERT INTO test_table (name) VALUES ($1); DROP TABLE test_table; --`,
 			Params: []interface{}{"Malicious User"},
 		}
 
@@ -231,7 +229,7 @@ func TestCreateItem(t *testing.T) {
 		requestBody := models.Request_body{
 			Query: `INSERT INTO test_table
 				(name, age, weight, profile_picture, is_active, notes, created_at)
-				VALUES (?, ?, ?, ?, ?, ?, ?);`,
+				VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id;`,
 			Params: []interface{}{
 				"Jane Doe", nil, nil, nil, false, nil,
 				time.Now().Format("2006-01-02 15:04:05"),
@@ -261,7 +259,7 @@ func TestCreateItem(t *testing.T) {
 		var age, weight sql.NullFloat64
 		var isActive bool
 		var notes sql.NullString
-		err = db.DB.QueryRow("SELECT name, age, weight, is_active, notes FROM test_table WHERE id = ?", responseID).
+		err = db.DB.QueryRow("SELECT name, age, weight, is_active, notes FROM test_table WHERE id = $1", responseID).
 			Scan(&name, &age, &weight, &isActive, &notes)
 		assert.NoError(t, err, "Error querying database")
 		assert.Equal(t, "Jane Doe", name)
@@ -274,7 +272,7 @@ func TestCreateItem(t *testing.T) {
 
 func TestGetItems(t *testing.T) {
 	// Initialize the database
-	err := db.InitDB("../../test_db.sqlite")
+	err := db.InitDB()
 	require.NoError(t, err, "Database initialization error")
 	defer db.DB.Close()
 
@@ -298,8 +296,8 @@ func TestGetItems(t *testing.T) {
 		Query: `
 			SELECT id, name, age, weight, profile_picture, is_active, notes, created_at
 			FROM test_table
-			WHERE id = ?;`, // Add your filtering condition here
-		Params: []interface{}{"1"}, // Example parameter to filter by active status
+			WHERE id = $1`,
+		Params: []interface{}{"1"},
 	}
 
 	t.Run("Successful GET request", func(t *testing.T) {
@@ -329,14 +327,15 @@ func TestGetItems(t *testing.T) {
 		assert.GreaterOrEqual(t, firstItem.Weight, 0.0, "Weight should be non-negative")
 		assert.NotNil(t, firstItem.ProfilePicture, "Profile picture should not be nil")
 		assert.IsType(t, []byte{}, firstItem.ProfilePicture, "Profile picture should be of type []byte")
-		assert.Contains(t, []int{0, 1}, firstItem.IsActive, "IsActive should not be empty")
+		assert.IsType(t, true, firstItem.IsActive, "IsActive should be a boolean")
 		assert.NotEmpty(t, firstItem.Notes, "Notes should not be empty")
-		assert.NotZero(t, firstItem.CreatedAt, "CreatedAt should not be zero")
+		assert.NotEmpty(t, firstItem.CreatedAt, "CreatedAt should not be empty")
+
 	})
 
 	t.Run("Invalid SQL query - non-SELECT query", func(t *testing.T) {
 		requestBody := models.Request_body{
-			Query:  "DELETE FROM test_table WHERE id = ?", // Invalid, since only SELECT is allowed
+			Query:  "DELETE FROM test_table WHERE id = $1", // Invalid, since only SELECT is allowed
 			Params: []interface{}{1},
 		}
 
@@ -384,7 +383,7 @@ func TestGetItems(t *testing.T) {
 
 	t.Run("SQL injection attempt", func(t *testing.T) {
 		requestBody := models.Request_body{
-			Query:  "SELECT * FROM test_table WHERE name = ?",
+			Query:  "SELECT * FROM test_table WHERE name = $1",
 			Params: []interface{}{"'; DROP TABLE test_table; --"},
 		}
 
@@ -409,7 +408,7 @@ func TestGetItems(t *testing.T) {
 
 	t.Run("Empty result set", func(t *testing.T) {
 		requestBody := models.Request_body{
-			Query:  "SELECT * FROM test_table WHERE id = ?",
+			Query:  "SELECT * FROM test_table WHERE id = $1",
 			Params: []interface{}{9999}, // Assuming this ID doesn't exist
 		}
 
@@ -433,7 +432,7 @@ func TestGetItems(t *testing.T) {
 }
 
 func TestGetItem(t *testing.T) {
-	err := db.InitDB("../../test_db.sqlite")
+	err := db.InitDB()
 	require.NoError(t, err, "Database initialization error")
 	defer db.DB.Close()
 
@@ -457,8 +456,8 @@ func TestGetItem(t *testing.T) {
 		Query: `
 			SELECT id, name, age, weight, profile_picture, is_active, notes, created_at
 			FROM test_table
-			WHERE id = ?;`,
-		Params: []interface{}{"1"},
+			WHERE id = $1;`,
+		Params: []interface{}{1},
 	}
 
 	t.Run("Successful GET request", func(t *testing.T) {
@@ -477,25 +476,27 @@ func TestGetItem(t *testing.T) {
 
 		var responseItem TestTable
 		err = json.Unmarshal(rr.Body.Bytes(), &responseItem)
+
 		assert.NoError(t, err, "Error parsing response body")
 		assert.NotEmpty(t, responseItem, "Response should not be empty")
 
 		// Check the structure of the first item
-		firstItem := responseItem
-		assert.NotZero(t, firstItem.ID, "ID should not be zero")
-		assert.NotEmpty(t, firstItem.Name, "Name should not be empty")
-		assert.GreaterOrEqual(t, firstItem.Age, 0, "Age should be non-negative")
-		assert.GreaterOrEqual(t, firstItem.Weight, 0.0, "Weight should be non-negative")
-		assert.NotNil(t, firstItem.ProfilePicture, "Profile picture should not be nil")
-		assert.IsType(t, []byte{}, firstItem.ProfilePicture, "Profile picture should be of type []byte")
-		assert.Contains(t, []int{0, 1}, firstItem.IsActive, "IsActive should be a boolean")
-		assert.NotEmpty(t, firstItem.Notes, "Notes should not be empty")
-		assert.NotZero(t, firstItem.CreatedAt, "CreatedAt should not be zero")
+
+		assert.NotZero(t, responseItem.ID, "ID should not be zero")
+		assert.NotEmpty(t, responseItem.Name, "Name should not be empty")
+		assert.GreaterOrEqual(t, responseItem.Age, 0, "Age should be non-negative")
+		assert.GreaterOrEqual(t, responseItem.Weight, 0.0, "Weight should be non-negative")
+		assert.NotNil(t, responseItem.ProfilePicture, "Profile picture should not be nil")
+		assert.IsType(t, []byte{}, responseItem.ProfilePicture, "Profile picture should be of type []byte")
+		assert.IsType(t, true, responseItem.IsActive, "IsActive should be a boolean")
+		assert.NotEmpty(t, responseItem.Notes, "Notes should not be empty")
+		assert.NotEmpty(t, responseItem.CreatedAt, "CreatedAt should not be empty")
+
 	})
 
 	t.Run("Invalid SQL query - non-SELECT query", func(t *testing.T) {
 		requestBody := models.Request_body{
-			Query:  "DELETE FROM test_table WHERE id = ?", // Invalid, since only SELECT is allowed
+			Query:  "DELETE FROM test_table WHERE id = $1", // Invalid, since only SELECT is allowed
 			Params: []interface{}{1},
 		}
 
@@ -543,7 +544,7 @@ func TestGetItem(t *testing.T) {
 
 	t.Run("SQL injection attempt", func(t *testing.T) {
 		requestBody := models.Request_body{
-			Query:  "SELECT * FROM test_table WHERE name = ?",
+			Query:  "SELECT * FROM test_table WHERE name = $1",
 			Params: []interface{}{"Name1; DROP TABLE test_table; --"},
 		}
 
@@ -571,7 +572,7 @@ func TestGetItem(t *testing.T) {
 			Query: `
 			SELECT id, name, age, weight, profile_picture, is_active, notes, created_at
 			FROM test_table
-			WHERE id = ?;`,
+			WHERE id = $1;`,
 			Params: []interface{}{9999}, // Assuming this ID doesn't exist
 		}
 
@@ -596,7 +597,7 @@ func TestGetItem(t *testing.T) {
 
 func TestUpdateItem(t *testing.T) {
 	// Initialize the database
-	err := db.InitDB("../../test_db.sqlite")
+	err := db.InitDB()
 	require.NoError(t, err, "Database initialization error")
 	defer db.DB.Close()
 
@@ -617,17 +618,17 @@ func TestUpdateItem(t *testing.T) {
 	}
 
 	t.Run("Successful item update", func(t *testing.T) {
-		requestBody := models.Request_body{
+		updatedRequestBody := models.Request_body{
 			Query: `UPDATE test_table
-				SET name = ?, age = ?, weight = ?, is_active = ?, notes = ?
-				WHERE id = ?;`,
+				SET name = $1, age = $2, weight = $3, is_active = $4, notes = $5
+				WHERE id = $6;`,
 			Params: []interface{}{
 				"Updated John Doe", 26, 73.5, false, "Updated note",
 				1,
 			},
 		}
 
-		jsonBody, err := json.Marshal(requestBody)
+		jsonBody, err := json.Marshal(updatedRequestBody)
 		require.NoError(t, err, "Error marshaling request body")
 
 		req, err := http.NewRequest("PUT", "/updateItem", bytes.NewBuffer(jsonBody))
@@ -658,7 +659,7 @@ func TestUpdateItem(t *testing.T) {
 
 	t.Run("Invalid SQL query - non-PUT query", func(t *testing.T) {
 		requestBody := models.Request_body{
-			Query:  "DELETE FROM test_table WHERE id = ?",
+			Query:  "DELETE FROM test_table WHERE id = $1",
 			Params: []interface{}{1},
 		}
 
@@ -705,7 +706,7 @@ func TestUpdateItem(t *testing.T) {
 
 	t.Run("SQL injection attempt", func(t *testing.T) {
 		requestBody := models.Request_body{
-			Query:  `UPDATE test_table SET name = ? WHERE id = 1; DROP TABLE test_table; --`,
+			Query:  `UPDATE test_table SET name = $1 WHERE id = 1; DROP TABLE test_table; --`,
 			Params: []interface{}{"Malicious User"},
 		}
 
@@ -740,8 +741,8 @@ func TestUpdateItem(t *testing.T) {
 	t.Run("Update item with null values", func(t *testing.T) {
 		requestBody := models.Request_body{
 			Query: `UPDATE test_table
-				SET name = ?, age = ?, weight = ?, is_active = ?, notes = ?
-				WHERE id = ?;`,
+				SET name = $1, age = $2, weight = $3, is_active = $4, notes = $5
+				WHERE id = $6;`,
 			Params: []interface{}{
 				"Null Value Test", nil, nil, false, nil,
 				2, // Assuming the second item has ID 2

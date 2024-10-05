@@ -140,14 +140,14 @@ func GetItem(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := stmt.Query(requestBody.Params...)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Error querying: %v", err)
 	}
 	defer rows.Close()
 
 	// Get column count and names dynamically
 	columns, err := rows.Columns()
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Error querying: %v", err)
 	}
 
 	values := make([]interface{}, len(columns))
@@ -162,7 +162,7 @@ func GetItem(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		err := rows.Scan(valuePtrs...)
 		if err != nil {
-			log.Fatal(err)
+			log.Printf("Error scanning row data: %v", err)
 		}
 
 		for i, col := range columns {
@@ -180,7 +180,7 @@ func GetItem(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(results)
 }
 
-// TODO: adjust this function to only run INSERT sql queries only
+// This function expects an INSERT query with a RETURNING id to ensure insertion
 // Create a new item
 func CreateItem(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -216,16 +216,16 @@ func CreateItem(w http.ResponseWriter, r *http.Request) {
 	}
 	defer stmt.Close()
 
-	result, err := stmt.Exec(requestBody.Params...)
+	var insertedID int
+	err = stmt.QueryRow(requestBody.Params...).Scan(&insertedID)
 	if err != nil {
-		log.Fatalf("SQL execution error: %v", err)
+		log.Printf("SQL execution error: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
 	}
 
-	id, _ := result.LastInsertId()
-	item := int(id)
-
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(item)
+	json.NewEncoder(w).Encode(insertedID)
 }
 
 // Update an existing item
@@ -265,7 +265,7 @@ func UpdateItem(w http.ResponseWriter, r *http.Request) {
 
 	_, err = stmt.Exec(requestBody.Params...)
 	if err != nil {
-		log.Fatalf("SQL execution error: %v", err)
+		log.Printf("SQL execution error: %v", err)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -285,7 +285,7 @@ func UpdateItem(w http.ResponseWriter, r *http.Request) {
 // 		return
 // 	}
 
-// 	_, err = db.DB.Exec("DELETE FROM test_table WHERE id = ?", id)
+// 	_, err = db.DB.Exec("DELETE FROM test_table WHERE id = $1", id)
 // 	if err != nil {
 // 		log.Fatal(err)
 // 	}
@@ -302,14 +302,14 @@ func HandleScriptRequest(w http.ResponseWriter, r *http.Request) {
 
 	_, filename, _, ok := runtime.Caller(0)
 	if !ok {
-		log.Fatal("No caller information")
+		log.Println("No caller information")
 	}
 
 	projectRoot := filepath.Dir(filepath.Dir(filepath.Dir(filename)))
 
 	err := godotenv.Load(filepath.Join(projectRoot, ".env"))
 	if err != nil {
-		log.Fatal("Error loading .env file: ", err)
+		fmt.Printf("Error loading .env file: %v", err)
 	}
 
 	// Token check
@@ -397,7 +397,7 @@ func PostSessionData(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Prepare the SELECT statement
-	stmt, err := db.DB.Prepare("SELECT id FROM sessions WHERE sessionId = ?")
+	stmt, err := db.DB.Prepare("SELECT id FROM sessions WHERE session_id = $1")
 	if err != nil {
 		log.Printf("Error preparing query: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -409,23 +409,14 @@ func PostSessionData(w http.ResponseWriter, r *http.Request) {
 	err = stmt.QueryRow(sessionId).Scan(&id)
 	if err != nil {
 		if id == 0 {
+			// No session, create it
 			_, err = db.DB.Exec(`
-            INSERT INTO sessions (
-                sessionId, lastActivityTime, userId, userPath,
-                sessionDuration, userAgent, referrer, token,
-                startTime, screenResolution, language
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-				sessionData["sessionId"],
-				sessionData["lastActivityTime"],
-				sessionData["userId"],
-				sessionData["userPath"],
-				sessionData["sessionDuration"],
-				sessionData["userAgent"],
-				sessionData["referrer"],
-				sessionData["token"],
-				sessionData["startTime"],
-				sessionData["screenResolution"],
-				sessionData["language"])
+			INSERT INTO sessions (last_activity_time, user_id, session_id, token, start_time, session_duration, user_agent, referrer, language)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+				sessionData["lastActivityTime"], sessionData["userId"], sessionData["sessionId"],
+				sessionData["token"], sessionData["startTime"], sessionData["sessionDuration"], sessionData["userAgent"],
+				sessionData["referrer"], sessionData["language"])
+
 			if err != nil {
 				http.Error(w, "Error inserting new session", http.StatusInternalServerError)
 				log.Printf("Error inserting new session: %v", err)
@@ -438,32 +429,14 @@ func PostSessionData(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		// Session found, update it
-		_, err := db.DB.Exec(`
+		_, err = db.DB.Exec(`
 		UPDATE sessions
-		SET
-			lastActivityTime = ?,
-			userId = ?,
-			userPath = ?,
-			sessionDuration = ?,
-			userAgent = ?,
-			referrer = ?,
-			token = ?,
-			startTime = ?,
-			screenResolution = ?,
-			language = ?
-		WHERE sessionId = ?`,
-			sessionData["lastActivityTime"],
-			sessionData["userId"],
-			sessionData["userPath"],
-			sessionData["sessionDuration"],
-			sessionData["userAgent"],
-			sessionData["referrer"],
-			sessionData["token"],
-			sessionData["startTime"],
-			sessionData["screenResolution"],
-			sessionData["language"],
-			sessionData["sessionId"],
-		)
+		SET last_activity_time = $2, user_id = $3, session_id = $1, token = $4, start_time = $5, session_duration = $6, user_agent = $7, referrer = $8, language = $9
+		WHERE session_id = $1`,
+			sessionData["sessionId"], sessionData["lastActivityTime"], sessionData["userId"],
+			sessionData["token"], sessionData["startTime"], sessionData["sessionDuration"], sessionData["userAgent"],
+			sessionData["referrer"], sessionData["language"])
+
 		if err != nil {
 			http.Error(w, "Error updating session", http.StatusInternalServerError)
 			log.Printf("Error updating session: %v", err)

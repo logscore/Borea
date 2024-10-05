@@ -24,7 +24,7 @@ var (
 )
 
 func main() {
-	err := db.InitDB("../db.sqlite")
+	err := db.InitDB()
 	if err != nil {
 		log.Fatalf("Error: %s", err)
 	}

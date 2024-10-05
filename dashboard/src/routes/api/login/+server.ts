@@ -4,9 +4,9 @@ import jwt from 'jsonwebtoken';
 import { SERVER_KEY, GO_PORT } from '$env/static/private';
 
 type Auth_User = {
-	ID: number;
+	id: number;
 	username: string;
-	passwordHash: string;
+	password_hash: string;
 };
 
 // Note, the back end is built to take an array of params that will be inserted into the query you pass in.
@@ -41,7 +41,7 @@ export async function POST({ request, cookies }) {
 
 		// Using parameterized query to prevent SQL injection, even though the backend functions are safe.
 		// TODO: implement a ORM to make this function work for any GET request and prevent sql injection
-		const query = `SELECT ID, username, passwordHash FROM admin_users WHERE username = ?`;
+		const query = `SELECT ID, username, password_hash FROM admin_users WHERE username = $1`;
 
 		const data = (await postQueryToServer('getItem', query, [username])) as Auth_User;
 
@@ -50,7 +50,7 @@ export async function POST({ request, cookies }) {
 
 		if (user) {
 			// Compare the provided password with the stored password hash
-			const isMatch = await bcrypt.compare(password, data.passwordHash);
+			const isMatch = await bcrypt.compare(password, data.password_hash);
 
 			if (isMatch) {
 				// Generate authentication token

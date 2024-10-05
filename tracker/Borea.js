@@ -23,12 +23,12 @@ Borea.init = function () {
         startTime: new Date(),
         sessionDuration: null,
         userAgent: navigator.userAgent,
-        screenResolution: [`${window.screen.width}x${window.screen.height}`],
+        // screenResolution: [`${window.screen.width}x${window.screen.height}`],
         // location set via helper function below
         location: null,
         language: navigator.language,
         referrer: this.helpers.getReferrer(document.referrer),
-        userPath: [],
+        // userPath: [],
         // to store and get access to at anytime. these are props you want to be tracked with an event
         // customProperties: {},
     };
@@ -209,24 +209,24 @@ Borea.parseOptions = function () {
         sessionStorage.setItem(metadataKey, JSON.stringify(this[metadataKey]));
     };
 
-    Borea.updateScreenResolution = function () {
-        this[metadataKey].screenResolution.push(`${window.innerWidth}x${window.innerHeight}`);
-    };
+    // Borea.updateScreenResolution = function () {
+    //     this[metadataKey].screenResolution.push(`${window.innerWidth}x${window.innerHeight}`);
+    // };
 
-    Borea.captureWindowLocationMetadata = function () {
-        const metadata = {
-            href: window.location.href,
-            protocol: window.location.protocol,
-            host: window.location.host,
-            hostname: window.location.hostname,
-            port: window.location.port,
-            pathname: window.location.pathname,
-            search: window.location.search,
-            hash: window.location.hash
-        };
+    // Borea.captureWindowLocationMetadata = function () {
+    //     const metadata = {
+    //         href: window.location.href,
+    //         protocol: window.location.protocol,
+    //         host: window.location.host,
+    //         hostname: window.location.hostname,
+    //         port: window.location.port,
+    //         pathname: window.location.pathname,
+    //         search: window.location.search,
+    //         hash: window.location.hash
+    //     };
 
-        this[metadataKey].userPath.push(metadata);
-    };
+    //     this[metadataKey].userPath.push(metadata.pathname);
+    // };
 
     Borea.postSessionData = function () {
         const route = postSessionDataRoute;
