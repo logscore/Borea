@@ -1,6 +1,5 @@
 <script lang="ts">
-	import Icon from 'svelte-fa';
-	import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
+	import { Eye, EyeOff } from 'lucide-svelte';
 	import { Input } from '$lib/components/ui/input/index.js';
 
 	let ref: HTMLInputElement | null;
@@ -25,7 +24,11 @@
 	<Input bind:ref bind:value {...props} {...$$restProps} />
 	<button type="button" tabindex="-1" on:click={toggleShowPassword}>
 		<div>
-			<Icon class="eye-icon" icon={showPassword ? faEyeSlash : faEye} />
+			{#if showPassword}
+				<EyeOff />
+			{:else}
+				<Eye />
+			{/if}
 		</div>
 	</button>
 </div>

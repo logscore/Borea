@@ -1,8 +1,4 @@
-<svg
-	class="h-7 w-7 text-gray-800 dark:text-gray-300"
-	viewBox="0 0 24 24"
-	fill="currentColor"
-	xmlns="http://www.w3.org/2000/svg"
+<svg class="h-7 w-7" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"
 	><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g
 		id="SVGRepo_tracerCarrier"
 		stroke-linecap="round"

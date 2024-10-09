@@ -27,7 +27,7 @@
 	}
 </script>
 
-<div class="flex h-screen w-screen items-center justify-center">
+<div class="flex h-screen w-full flex-1 items-center justify-center">
 	<Card.Root class="w-full max-w-sm">
 		<Card.Header>
 			<Card.Title class="text-2xl">Login</Card.Title>
