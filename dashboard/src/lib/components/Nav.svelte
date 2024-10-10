@@ -4,7 +4,8 @@
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import * as Tooltip from '$lib/components/ui/tooltip';
 	import { toggleMode } from 'mode-watcher';
-	import { Moon, Sun } from 'svelte-radix';
+	import Moon from 'lucide-svelte/icons/moon';
+	import Sun from 'lucide-svelte/icons/sun';
 	import BookIcon from '$lib/components/icons/BookIcon.svelte';
 	import PersonIcon from '$lib/components/icons/PersonIcon.svelte';
 

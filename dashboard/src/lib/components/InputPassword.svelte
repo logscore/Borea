@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { Eye, EyeOff } from 'lucide-svelte';
+	import Eye from 'lucide-svelte/icons/eye';
+	import EyeOff from 'lucide-svelte/icons/eye-off';
 	import { Input } from '$lib/components/ui/input/index.js';
 
 	let ref: HTMLInputElement | null;
