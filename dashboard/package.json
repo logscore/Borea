@@ -15,8 +15,6 @@
 		"test:unit": "vitest"
 	},
 	"devDependencies": {
-		"@melt-ui/pp": "^0.3.2",
-		"@melt-ui/svelte": "^0.83.0",
 		"@playwright/test": "^1.28.1",
 		"@sveltejs/adapter-auto": "^3.0.0",
 		"@sveltejs/adapter-node": "^5.2.5",
@@ -57,11 +55,8 @@
 		"lucide-svelte": "^0.447.0",
 		"mode-watcher": "^0.4.1",
 		"paneforge": "^0.0.6",
-		"sqlite": "^5.1.1",
-		"sqlite3": "^5.1.7",
 		"svelte-radix": "^1.1.1",
 		"svelte-sonner": "^0.3.28",
-		"sveltekit-superforms": "^2.19.0",
 		"tailwind-merge": "^2.5.2",
 		"tailwind-variants": "^0.2.1",
 		"vaul-svelte": "^0.3.2",
