@@ -1,0 +1,24 @@
+# Ignore the vendor directory and Go binaries
+vendor/
+*.exe
+*.out
+*.o
+*.a
+*.so
+*.dll
+
+# Ignore test data and results
+*.test
+*.log
+*.tmp
+
+# Ignore version control files
+.git/
+.gitignore
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
+
+#Ignore tests
+test/

@@ -5,6 +5,7 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"os"
 
 	_ "github.com/lib/pq"
 )
@@ -12,8 +13,14 @@ import (
 var DB *sql.DB
 
 func InitDB() error {
+	PG_HOST := os.Getenv("PG_HOST")
+	PG_PORT := os.Getenv("PG_PORT")
+	PG_USER := os.Getenv("PG_USER")
+	PG_PSWD := os.Getenv("PG_PSWD")
+	DB_NAME := os.Getenv("DB_NAME")
+
 	var err error
-	connectionString := "host=localhost port=5432 user=borea password=borea dbname=pg_borea sslmode=disable"
+	connectionString := fmt.Sprintf(`host=%s port=%s user=%s password=%s dbname=%s sslmode=disable`, PG_HOST, PG_PORT, PG_USER, PG_PSWD, DB_NAME)
 
 	DB, err = sql.Open("postgres", connectionString)
 	if err != nil {

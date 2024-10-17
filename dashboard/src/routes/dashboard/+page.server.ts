@@ -1,10 +1,12 @@
+const HOST_ADDRESS = process.env.HOST_ADDRESS;
+const GO_PORT = process.env.GO_PORT;
+
 interface SessionData {
 	date: string;
 	count: number;
 }
 
 interface ApiResponse {
-	// Base64 encoded string
 	key_value_pairs: string;
 }
 
@@ -18,10 +20,10 @@ export async function load() {
         GROUP BY DATE(last_activity_time)
     ) AS subquery;`;
 
-	const params = ['2024-10-01', '2024-10-10']; // Replace with passed-in parameters
+	const params = ['2024-10-01', '2024-10-31']; // Replace with passed-in parameters
 
 	try {
-		const response = await fetch('http://localhost:8080/getItems', {
+		const response = await fetch(`http://${HOST_ADDRESS}:${GO_PORT}/getItems`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json'

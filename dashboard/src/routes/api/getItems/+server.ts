@@ -1,9 +1,11 @@
 // src/routes/api/getItems/+server.ts
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+const HOST_ADDRESS = process.env.HOST_ADDRESS;
+const GO_PORT = process.env.GO_PORT;
 
 export const POST: RequestHandler = async ({ request, fetch }) => {
-	const backendUrl = 'http://localhost:8080/getItems';
+	const backendUrl = `http://${HOST_ADDRESS}:${GO_PORT}/getItems`;
 
 	try {
 		// Forward the original request body to the backend

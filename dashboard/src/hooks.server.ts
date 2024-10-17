@@ -1,6 +1,6 @@
 import { type RequestEvent, redirect, type Handle } from '@sveltejs/kit';
-import { SERVER_KEY } from '$env/static/private';
 import jwt from 'jsonwebtoken';
+const SERVER_KEY = process.env.SERVER_KEY;
 
 const nonPublicRoutes = ['/', '/dashboard'];
 

@@ -1,7 +1,9 @@
 import { json } from '@sveltejs/kit';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { SERVER_KEY, GO_PORT } from '$env/static/private';
+const HOST_ADDRESS = process.env.HOST_ADDRESS;
+const GO_PORT = process.env.GO_PORT;
+const SERVER_KEY = process.env.SERVER_KEY;
 
 type Auth_User = {
 	id: number;
@@ -10,7 +12,7 @@ type Auth_User = {
 };
 
 async function postQueryToServer(handle: string, query: string, params: string[]) {
-	const url = `http://localhost:${GO_PORT}/${handle}`;
+	const url = `http://${HOST_ADDRESS}:${GO_PORT}/${handle}`;
 	try {
 		const response = await fetch(url, {
 			method: 'POST',
@@ -54,7 +56,7 @@ export async function POST({ request, cookies }) {
 				// Set cookie with the authentication token
 				cookies.set('session', authToken, {
 					path: '/',
-					secure: true,
+					secure: false,
 					httpOnly: true,
 					sameSite: 'strict',
 					maxAge: 60 * 60 * 24 * 7

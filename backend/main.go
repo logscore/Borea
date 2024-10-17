@@ -14,13 +14,11 @@ import (
 
 	"Borea/backend/db"
 	"Borea/backend/handlers"
-
-	"github.com/joho/godotenv"
 )
 
 var (
-	URL    string
-	goPort string
+	URL     string
+	GO_PORT string
 )
 
 func main() {
@@ -38,14 +36,11 @@ func main() {
 	http.HandleFunc("/script", handlers.HandleScriptRequest)
 	http.HandleFunc("/postSession", handlers.PostSessionData)
 
-	err = godotenv.Load("../.env")
-	if err != nil {
-		fmt.Println("Error loading .env file")
-	}
+	http.HandleFunc("/ping", handlers.PingHandler)
 
-	goPort = os.Getenv("GO_PORT")
+	GO_PORT = os.Getenv("GO_PORT")
+	URL = fmt.Sprintf("0.0.0.0:%s", GO_PORT) // Changed from localhost to 0.0.0.0 for prod
 
-	URL = fmt.Sprintf("localhost:%s", goPort)
 	server := &http.Server{
 		Addr:    URL,
 		Handler: nil,

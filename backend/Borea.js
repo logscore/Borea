@@ -229,18 +229,11 @@ Borea.parseOptions = function () {
     // };
 
     Borea.postSessionData = function () {
-        const route = postSessionDataRoute;
-
-        const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
-        const protocol = isLocalhost ? 'http' : 'https';
-        const baseUrl = isLocalhost ? `localhost:${GO_PORT}` : DOMAIN;
-
-        const url = `${protocol}://${baseUrl}/${route}`;
-
+        const url = `http://192.168.86.23:${GO_PORT}/postSession`;
+        console.log('Fetching URL:', url);
+        
         fetch(url, {
             method: 'POST',
-            // TODO figure out no-cors client vs server side
-            // mode: 'no-cors',
             headers: {
                 'Content-Type': 'application/json',
             },
@@ -250,8 +243,7 @@ Borea.parseOptions = function () {
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                const data = response.json();
-                return data;
+                return response.json(); // Note: return the promise for the next .then
             })
             .then(data => {
                 console.log('Success:', data);
@@ -260,6 +252,7 @@ Borea.parseOptions = function () {
                 console.error('Error:', error);
             });
     };
+    
 }
 
 // Event Listener Management

@@ -10,19 +10,26 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
-	"runtime"
 
 	"Borea/backend/db"
 	"Borea/backend/helper"
 	"Borea/backend/models"
-
-	"github.com/joho/godotenv"
 )
 
 // TODO: change this to GET and find a way to send the query & param data without a POST or URL params
 // TODO: change this to only run SELECT statements
 func GetItems(w http.ResponseWriter, r *http.Request) {
+	DOMAIN := os.Getenv("DOMAIN")
+
+	w.Header().Set("Access-Control-Allow-Origin", DOMAIN)
+	w.Header().Set("Access-Control-Allow-Methods", "POST")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
 	if r.Method != http.MethodPost {
 		fmt.Println("Invalid request method")
 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
@@ -105,6 +112,17 @@ func GetItems(w http.ResponseWriter, r *http.Request) {
 // TODO: change this functio nto only run SELECT sql queries
 // Note that this returns an interface type, while GetItems returns an array of interface types
 func GetItem(w http.ResponseWriter, r *http.Request) {
+	DOMAIN := os.Getenv("DOMAIN")
+
+	w.Header().Set("Access-Control-Allow-Origin", DOMAIN)
+	w.Header().Set("Access-Control-Allow-Methods", "POST")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
 		return
@@ -183,6 +201,17 @@ func GetItem(w http.ResponseWriter, r *http.Request) {
 // This function expects an INSERT query with a RETURNING id to ensure insertion
 // Create a new item
 func CreateItem(w http.ResponseWriter, r *http.Request) {
+	DOMAIN := os.Getenv("DOMAIN")
+
+	w.Header().Set("Access-Control-Allow-Origin", DOMAIN)
+	w.Header().Set("Access-Control-Allow-Methods", "POST")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
 		return
@@ -230,6 +259,17 @@ func CreateItem(w http.ResponseWriter, r *http.Request) {
 
 // Update an existing item
 func UpdateItem(w http.ResponseWriter, r *http.Request) {
+	DOMAIN := os.Getenv("DOMAIN")
+
+	w.Header().Set("Access-Control-Allow-Origin", DOMAIN)
+	w.Header().Set("Access-Control-Allow-Methods", "PUT")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
 	if r.Method != http.MethodPut {
 		http.Error(w, "Invalid query: only PUT queries allowed", http.StatusMethodNotAllowed)
 		return
@@ -295,32 +335,27 @@ func UpdateItem(w http.ResponseWriter, r *http.Request) {
 // }
 
 func HandleScriptRequest(w http.ResponseWriter, r *http.Request) {
+	DOMAIN := os.Getenv("DOMAIN")
+	TOKEN := os.Getenv("API_TOKEN")
+
+	w.Header().Set("Access-Control-Allow-Origin", DOMAIN)
+	w.Header().Set("Access-Control-Allow-Methods", "GET")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	_, filename, _, ok := runtime.Caller(0)
-	if !ok {
-		log.Println("No caller information")
-	}
-
-	projectRoot := filepath.Dir(filepath.Dir(filepath.Dir(filename)))
-
-	err := godotenv.Load(filepath.Join(projectRoot, ".env"))
-	if err != nil {
-		fmt.Printf("Error loading .env file: %v", err)
-	}
-
 	// Token check
 	token := r.URL.Query().Get("token")
 
-	TOKEN := os.Getenv("API_TOKEN")
-
-	validToken := false
-	if TOKEN == token {
-		validToken = true
-	}
+	validToken := TOKEN == token
 
 	if !validToken {
 		http.Error(w, "Invalid token in request", http.StatusForbidden)
@@ -331,21 +366,18 @@ func HandleScriptRequest(w http.ResponseWriter, r *http.Request) {
 	domain := helper.ParseDomainRequest(r)
 	if domain == "" {
 		http.Error(w, "Error getting domain", http.StatusForbidden)
+		return
 	}
 
-	DOMAIN := os.Getenv("DOMAIN")
-
-	domainAllowed := false
-	if DOMAIN == domain {
-		domainAllowed = true
-	}
+	domainAllowed := DOMAIN == domain
 
 	if !domainAllowed {
 		http.Error(w, "Domain not allowed for this token", http.StatusForbidden)
 		return
 	}
 
-	jsContent, err := os.ReadFile(filepath.Join(projectRoot, "/tracker/Borea.js"))
+	// Read the content of the JavaScript file
+	jsContent, err := os.ReadFile("./Borea.js")
 	if err != nil {
 		http.Error(w, "Error reading script file", http.StatusInternalServerError)
 		log.Printf("Error reading script file: %v", err)
@@ -447,4 +479,13 @@ func PostSessionData(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"success": true}`))
+}
+
+func PingHandler(w http.ResponseWriter, r *http.Request) {
+	// Set response header and status
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(http.StatusOK)
+
+	// Respond with "pong"
+	fmt.Fprintln(w, "pong")
 }
